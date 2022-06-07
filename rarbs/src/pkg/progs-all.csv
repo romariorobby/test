@@ -1,0 +1,3 @@
+#TAG,NAME IN REPO (or git url),PURPOSE (should be a verb phrase to sound right while installing)
+P,git+https://github.com/wustho/epy, "is CLI ereader"
+N,

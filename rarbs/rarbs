@@ -1,0 +1,8 @@
+#!/bin/sh
+
+case "$OSTYPE" in
+	linux*) . src/arch $* ;;
+	darwin*) . src/osx $* ;;
+	*) printf "error" ;;
+esac
+
