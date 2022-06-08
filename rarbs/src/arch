@@ -24,7 +24,6 @@ if [ -z "$progsallfile" ]; then
 fi
 [ -z "$aurhelper" ] && aurhelper="paru"
 [ -z "$repobranch" ] && repobranch="master"
-
 dialog(){
   if "${LAPTOP}"; then
 		backtitle="BAT: $(cat /sys/class/power_supply/BAT0/capacity)%"
@@ -53,7 +52,7 @@ load() {
 
     echo 100
     sleep 1
-  } | dialog --gauge "${msg}" 9 79 0
+  } | dialog --title "${title}" --gauge "${msg}" 9 79 0
 }
 
 log() {
@@ -109,14 +108,21 @@ maininstall() { # Installs all needed programs from main repo.
 	) & pid=$! pri=0.2 title="Main Installation" msg="[$n/$total] Installing $1 (${status})\n\n $2\n\Z1> \Z2\`pacman -S $1\`\Zn" load
 }
 
+# TODO: Seems have problem 
 aurmanualinstall() { # Installs $1 manually. Used only for AUR helper here.
 	# Should be run after repodir is created and var is set.
-	dialog --infobox "Installing \"$1\", an AUR helper..." 4 50
-	sudo -u "$name" mkdir -p "$repodir/$1"
-	sudo -u "$name" git -C "$repodir/$1" clone --depth 1 "https://aur.archlinux.org/$1.git" "$repodir/$1" >/dev/null 2>&1 ||
-		{ cd "$repodir/$1" || return 1 ; sudo -u "$name" git pull --force origin master;}
-	cd "$repodir/$1"
-	sudo -u "$name" -D "$repodir/$1" makepkg --noconfirm -si >/dev/null 2>&1 || return 1
+#	dialog --infobox "Installing \"$1\", an AUR helper..." 4 50
+	(
+		sudo -u "$name" mkdir -p "$repodir/$1"
+	) & pid=$! pri=0.2 title="RARBS Installation" msg="Creating Directory\n\n blablaalb\n\Z1> \Z2\`mkdir -p $repodir/$1 \`\Zn" load
+	(
+		sudo -u "$name" git -C "$repodir/$1" clone --depth 1 "https://aur.archlinux.org/$1.git" "$repodir/$1" >/dev/null 2>&1 || \
+			{ cd "$repodir/$1" || return 1 ; sudo -u "$name" git pull --force origin master >/dev/null 2>&1;}
+	) & pid=$! pri=0.2 title="RARBS Installation" msg="Cloning $aurhelper.git\n\n blablaalb\n\Z1> \Z2\`git clone https://aur.archlinux.org/$1.git\`\Zn" load
+		cd "$repodir/$1"
+	(
+		sudo -u "$name" -D "$repodir/$1" makepkg --noconfirm -si >/dev/null 2>&1 || return 1
+	) & pid=$! pri=0.2 title="RARBS Installation" msg="Installing $aurhelper\n\n blablaalb\n\Z1> \Z2\`makepkg -si\`\Zn" load
 }
 
 aurinstall() { \
@@ -145,6 +151,7 @@ npminstall() { \
 	}
 
 installationloop() { \
+	# TODO: How to clean this progsfile sorting
 	# Sanity check
 	([ -f "$progsfile" ] && cp "$progsfile" /tmp/progs.csv && sed -i '/^#/d' /tmp/progs.csv) | sed -e '/^#/d' /tmp/progs.csv || curl -Ls "$progsfile" | sed '/^#/d' > /tmp/progs.csv
 	# include progs-all.csv into progs.csv
@@ -252,7 +259,7 @@ sed -Ei "s/^#(ParallelDownloads).*/\1 = 5/;/^#Color$/s/#//" /etc/pacman.conf
 # Use all cores for compilation.
 sed -i "s/-j2/-j$(nproc)/;/^#MAKEFLAGS/s/^#//" /etc/makepkg.conf
 
-# aurmanualinstall paru-bin || error "Failed to install AUR helper."
+aurmanualinstall paru-bin || error "Failed to install AUR helper."
 
 # The command that does all the installing. Reads the progs.csv file and
 # installs each needed program the way required. Be sure to run this only after
